@@ -1,67 +1,79 @@
 # Monthly
 
-A lock screen number showing how much of your monthly budget is left, plus a daily pace.
-Apple Pay purchases are logged automatically through a Shortcuts automation, and anything else you add by hand.
+**See how much you have left to spend this month without opening an app.**
+
+Budget apps show what you spent, but you have to open them and work out what's left yourself. Monthly puts one number on your lock screen: what's left of your monthly spending budget. It updates the moment you pay.
+
+> Budget: **$1,000** for Nov 1–30 (not counting rent).
+> Spent **$20** by Nov 2 → lock screen shows **$980 · $33/day**.
+
+---
+
+## How it works
 
 ```
-Apple Pay tap → Shortcuts "Transaction" automation → Monthly "Log Expense" action
-             → saved to shared storage → lock screen widget redraws: "$980 · $33/day"
+Tap to pay with Apple Pay
+   → iPhone Shortcuts "Transaction" automation fires instantly
+   → passes the amount + merchant to Monthly in the background
+   → Monthly subtracts it from the budget
+   → lock screen widget updates: "$980 · $33/day"
 ```
 
-## One-time setup on your Mac
+- **iPhone only.**
+- **Apple Pay purchases are logged automatically** through a Shortcuts automation (iOS 17+). You don't need to connect a bank.
+- **Everything else is entered by hand**, such as online purchases that don't use Apple Pay, cash, and refunds. A lock screen "+" button makes that two taps.
+- **Rent and bills stay out** automatically if you pay them by bank transfer instead of Apple Pay.
+- **The budget resets every month** on a day you choose (the 1st, or your payday).
+- **Daily pace:** besides what's left, it shows how much you can spend per day for the rest of the month. That number tells you whether you're on track.
 
-1. **Install XcodeGen**, which generates the Xcode project from `project.yml`:
-   ```sh
-   brew install xcodegen
-   ```
-   (No Homebrew? Install it first from https://brew.sh.)
+## Screens
 
-2. **Pick a unique ID.** Open `project.yml` and change `BUNDLE_PREFIX: com.example` to something like `com.yourname`.
+### 1. Lock screen widget (the main product)
+- **Under the clock:** a large **$980**, with **$33/day · 29d left** below it and a thin progress bar.
+- **Above the clock (one line):** `$980 left · $33/day`
+- **Small ring option:** a circle that empties as you spend, with the amount in the middle.
+- Tapping the widget opens the app.
+- Turns red when you're over budget.
 
-3. **Generate and open the project:**
-   ```sh
-   cd monthly
-   xcodegen
-   open Monthly.xcodeproj
-   ```
+### 2. Quick add button
+- Replaces the flashlight or camera button in a lock screen corner, or goes in Control Center.
+- Opens straight to a number pad. Type the amount, tap Save.
 
-4. **Signing.** In Xcode, click the blue *Monthly* project in the left sidebar. For **each** target (*Monthly* and *MonthlyWidget*), go to *Signing & Capabilities* and pick your Team.
-   - The widget reads the app's data through an **App Group**. Free Apple accounts usually can't use App Groups, so you'll likely need the $99/year Apple Developer Program. If Xcode shows an App Groups error, that's the reason.
+### 3. Home screen (in the app)
+- A big "left this month" number, "left of $1,000," a progress bar, and the per-day amount.
+- Below that, this month's purchases, newest first. Each one shows an icon for Apple Pay or manual entry, the merchant, the time and the amount.
+- Swipe to delete, tap to edit.
+- **+** in the top right adds a purchase, and the gear icon in the top left opens Settings.
 
-5. **Run it on your iPhone.** Plug in the phone, select it at the top of Xcode, and press ▶. The first time, approve the developer on the phone under *Settings → General → VPN & Device Management*, and turn on *Developer Mode* if asked.
+### 4. Add / edit purchase
+- Switch between Purchase and Refund.
+- Amount field with the number pad already open.
+- Optional note or merchant.
+- Date and time (defaults to now).
 
-## Set up on your iPhone
+### 5. Settings
+- Monthly budget amount.
+- Reset day (1–28).
+- Instructions for setting up the Apple Pay automation in the Shortcuts app.
 
-**Budget:** open Monthly, tap ⚙️, and set your budget and the day it resets.
+## Version 1 scope
 
-**Apple Pay auto-logging:**
-1. Open the Shortcuts app, go to **Automation**, tap **+**, and choose **Transaction**.
-2. Pick the cards you pay with and select **Run Immediately**.
-3. Add the action **Log Expense** (from Monthly).
-4. Tap **Amount** and pick *Shortcut Input → Amount*. Tap **Merchant** and pick *Shortcut Input → Merchant*.
-
-**Lock screen widget:** long-press the lock screen, tap **Customize → Lock Screen**, tap the widget area under the clock, and add **Monthly → Money Left**.
-
-**Quick add button:** in the same lock screen editor, tap a bottom corner button (flashlight or camera), remove it, and pick **Add Expense**. You can also add it to Control Center.
-
-## Things to test in week one
-
-- [ ] An in-store Apple Pay tap logs the right amount within seconds.
-- [ ] **Online / in-app Apple Pay purchases:** does the automation fire? If it does, don't also enter them by hand, or they'll count twice.
-- [ ] A refund. It probably doesn't fire the automation; add it manually as a *Refund*.
-- [ ] The lock screen number updates right after a tap, without opening the app.
-- [ ] The per-day number changes after midnight.
-
-## Code map
-
-| File | What it does |
+| In | Out (for now) |
 |---|---|
-| `Shared/Storage.swift` | Expense data model, shared storage, settings |
-| `Shared/Budget.swift` | Budget period math, "left" and "per day", amount parsing |
-| `Shared/QuickAddIntent.swift` | Lock screen "+" button action |
-| `Monthly/LogExpenseIntent.swift` | The "Log Expense" Shortcuts action |
-| `Monthly/ContentView.swift` | Main screen |
-| `Monthly/ExpenseFormView.swift` | Add/edit a purchase |
-| `Monthly/SettingsView.swift` | Budget and reset day |
-| `MonthlyWidget/BudgetWidget.swift` | Lock screen and home screen widget |
-| `MonthlyWidget/QuickAddControl.swift` | Lock screen / Control Center button |
+| Lock screen widget + daily pace | Bank connections |
+| Apple Pay auto-logging | Categories |
+| Manual add / edit / refund | Rollover of unspent money |
+| Budget + reset day settings | Shared budgets with a partner |
+| Lock screen "+" button | Android |
+
+## Open questions to test
+
+- Does the Shortcuts trigger also fire for **online / in-app Apple Pay**? If it does, manual entries could count those purchases twice.
+- Do **refunds** fire the trigger? (Probably not, so they get entered by hand.)
+- How fast does the lock screen widget update after a tap?
+
+## Build notes
+
+- Swift and SwiftUI; the widget uses Apple's widget framework (WidgetKit).
+- The Shortcuts action is a "Log Expense" App Intent that runs in the background.
+- The app and widget share data through an App Group, which likely requires the paid Apple Developer Program ($99/yr).
